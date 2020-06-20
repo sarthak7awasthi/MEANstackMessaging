@@ -7,10 +7,18 @@ import { HttpClient } from '@angular/common/http';
 })
 export class AppComponent {
   message = '';
-  constructor(private http: HttpClient) {}
+  messages = [];
+  userName= '';
+  constructor(private http: HttpClient) {
+    
+  }
+
+  async ngOnInit(){
+    this.messages = (await this.http.get('http://localhost:3000/api/message').toPromise()) as any[];
+  }
 
   post() {
     console.log('post', this.message);
-    return this.http.post('http://localhost:3000/api/message', this.message).toPromise();
+    return this.http.post('http://localhost:3000/api/message', { msg: this.message, userName: this.userName}).toPromise();
   }
 }

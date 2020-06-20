@@ -1,35 +1,52 @@
-const express = require('express')
+const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const MongoClient = require('mongodb').MongoClient;
-const app = express()
-const port = 3000;
-const url = 'mongodb://localhost:27017';
-const dbName = 'messageBoard';
-let db;
+var mongoose = require('mongoose');
 
-app.use(bodyParser.text());
+const app = express();
+const port = 3000;
+const url = 'mongodb://localhost:27017/messageBoard';
+
+app.use(bodyParser.json());
 app.use(cors());
-app.post('/api/message', (req,res) => {
-    console.log(req.body);
-    db.collection('messages').insertOne({'msg': req.body});
+
+var db = mongoose.connection;
+
+db.on('error', console.error.bind(console, 'connection error:'));
+
+db.once('open', () => console.log('connected to mongodb'));
+
+const Message = mongoose.model('Message', {
+    userName: String,
+    msg: String
+});
+
+const User = mongoose.model('User', {
+    name: String
+});
+
+
+app.post('/api/message', async (req, res) => {
+    const message = new Message(req.body);
+
+    message.save();
+
+    const foundUser = await User.findOne({ name: message.userName });
+    console.log(foundUser);
+
+    if (!foundUser) (new User({ name: message.userName })).save();
+
     res.status(200).send();
 })
 
-async function GetMessages() {
-    const docs = await db.collection('messages').find({}).toArray();
-        console.log(docs);
-}
+app.get('/api/message', async (req, res) => {
+    const docs = await Message.find();
 
-MongoClient.connect(url, function(err, client) {
+    if (!docs) return res.json({ error: "error getting messages" });
 
-    if(err) return console.log('mongo error', err);
+    res.json(docs);
+})
 
-    console.log("Connected successfully to server");
-   
-    db = client.db(dbName);
-    GetMessages();
+mongoose.connect(url);
 
-  });
-
-app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`))
+app.listen(port, () => console.log('App running on port', port));
